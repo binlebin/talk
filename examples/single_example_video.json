@@ -1,7 +1,7 @@
 {
-    "prompt": "A man is talking",
-    "cond_video": "examples/single/ref_video.mp4",
+    "prompt": "A woman is talking",
+    "cond_video": "examples/single/test.mp4",
     "cond_audio": {
-        "person1": "examples/single/1.wav"
+        "person1": "examples/single/test.wav"
     }
 }
