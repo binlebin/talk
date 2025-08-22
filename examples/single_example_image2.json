@@ -1,0 +1,7 @@
+{
+    "prompt": "A professional female doctor is speaking with a confident and welcoming smile in a bright hospital corridor. She wears a crisp white doctor's coat over a black-and-white patterned dress, with her hands comfortably in her pockets. Her dark hair is neatly styled, framing her friendly face. The lighting is clean and bright, reflecting off the modern interior and creating a trustworthy and authoritative atmosphere. A medium shot captures her from the waist up, focusing on her engaging and expert delivery.",
+    "cond_video": "examples/single/h3.png",
+    "cond_audio": {
+        "person1": "examples/single/a2.wav"
+    }
+}

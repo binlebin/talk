@@ -1,7 +1,7 @@
 {
-    "prompt": "A woman is passionately singing into a professional microphone in a recording studio. She wears large black headphones and a dark cardigan over a gray top. Her long, wavy brown hair frames her face as she looks slightly upwards, her mouth open mid-song. The studio is equipped with various audio equipment, including a mixing console and a keyboard, with soundproofing panels on the walls. The lighting is warm and focused on her, creating a professional and intimate atmosphere. A close-up shot captures her expressive performance.",
-    "cond_video": "examples/single/ref_image.png",
+    "prompt": "A professional woman, a doctor, is sitting in the bright and welcoming lobby of a medical center. She is dressed in a light blue, floral-patterned dress with a pleated skirt and a collar. With a warm and empathetic expression, she speaks directly to the camera, offering reassuring advice. She is seated next to a small white table that holds an elegant vase of white orchids and a small, modern microphone. The lighting is clean and professional, creating a trustworthy and supportive atmosphere. A medium shot captures her from the waist up, focusing on her calm and engaging communication.",
+    "cond_video": "examples/single/h1.png",
     "cond_audio": {
-        "person1": "examples/single/1.wav"
+        "person1": "examples/single/test.wav"
     }
 }

@@ -1,0 +1,7 @@
+{
+    "prompt": "A female doctor with a warm and engaging expression is speaking directly to the camera in a cozy office. She is dressed in a professional white doctor's coat over a patterned dress, her dark hair elegantly styled in an updo. She stands with a gentle smile, her mouth slightly open as if mid-sentence, conveying a sense of thoughtful communication. The background features a modern, well-lit bookcase filled with books, creating a scholarly and inviting atmosphere. The lighting is soft and warm, making the space feel both professional and comfortable. A medium shot frames her from the waist up, highlighting her approachable demeanor and the knowledgeable setting.",
+    "cond_video": "examples/single/h2.png",
+    "cond_audio": {
+        "person1": "examples/single/a4.wav"
+    }
+}
