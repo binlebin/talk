@@ -10,6 +10,7 @@ from xfuser.core.distributed import (
 )
 import xformers.ops
 
+# Revert to original flash attention check
 try:
     import flash_attn_interface
     FLASH_ATTN_3_AVAILABLE = True
