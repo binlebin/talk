@@ -248,6 +248,37 @@ def _parse_args():
         default=None,
         help="Quantization type, must be 'int8' or 'fp8'."
     )
+    parser.add_argument(
+        "--torch_compile",
+        action="store_true",
+        default=False,
+        help="Enable torch.compile for the core diffusion model."
+    )
+    parser.add_argument(
+        "--compile_mode",
+        type=str,
+        default="reduce-overhead",
+        choices=["default", "reduce-overhead", "max-autotune"],
+        help="Mode for torch.compile."
+    )
+    parser.add_argument(
+        "--compile_fullgraph",
+        action="store_true",
+        default=False,
+        help="Pass fullgraph=True to torch.compile."
+    )
+    parser.add_argument(
+        "--deepspeed_inference",
+        action="store_true",
+        default=False,
+        help="Wrap the core diffusion model with DeepSpeed Inference."
+    )
+    parser.add_argument(
+        "--ds_dtype",
+        type=str,
+        default=None,
+        help="Override dtype for DeepSpeed Inference (e.g., bf16, fp16)."
+    )
     args = parser.parse_args()
     _validate_args(args)
     return args
@@ -505,7 +536,12 @@ def run_graio_demo(args):
         lora_scales=args.lora_scale,
         quant=args.quant,
         dit_path=args.dit_path,
-        infinitetalk_dir=args.infinitetalk_dir
+        infinitetalk_dir=args.infinitetalk_dir,
+        torch_compile=args.torch_compile,
+        compile_mode=args.compile_mode,
+        compile_fullgraph=args.compile_fullgraph,
+        deepspeed_inference=args.deepspeed_inference,
+        ds_dtype=args.ds_dtype,
     )
 
     if args.num_persistent_param_in_dit is not None:

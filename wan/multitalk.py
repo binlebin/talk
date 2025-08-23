@@ -129,6 +129,11 @@ class InfiniteTalkPipeline:
         quant = None,
         dit_path = None,
         infinitetalk_dir=None,
+        torch_compile: bool = False,
+        compile_mode: str = "reduce-overhead",
+        compile_fullgraph: bool = False,
+        deepspeed_inference: bool = False,
+        ds_dtype: str = None,
     ):
         r"""
         Initializes the image-to-video generation model components.
@@ -278,6 +283,32 @@ class InfiniteTalkPipeline:
             if not init_on_cpu:
                 self.model.to(self.device)
         
+        # Optional acceleration backends (only when not using FSDP/USP)
+        try:
+            can_accelerate = (not dit_fsdp) and (not use_usp) and (quant is None)
+            if can_accelerate and deepspeed_inference:
+                import deepspeed as _ds  # optional dependency
+                _dtype = self.param_dtype
+                if ds_dtype is not None:
+                    if ds_dtype.lower() in ["bf16", "bfloat16"]:
+                        _dtype = torch.bfloat16
+                    elif ds_dtype.lower() in ["fp16", "float16", "half"]:
+                        _dtype = torch.float16
+                self.model = _ds.init_inference(
+                    self.model,
+                    dtype=_dtype,
+                    replace_with_kernel_inject=True,
+                )
+            elif can_accelerate and torch_compile and hasattr(torch, "compile"):
+                # compile the core diffusion model forward for faster inference
+                self.model = torch.compile(
+                    self.model,
+                    mode=compile_mode,
+                    fullgraph=compile_fullgraph,
+                )
+        except Exception as e:
+            logging.warning(f"Acceleration backend setup skipped due to error: {e}")
+
         self.sample_neg_prompt = config.sample_neg_prompt
         self.num_timesteps = num_timesteps
         self.use_timestep_transform = use_timestep_transform
