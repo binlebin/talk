@@ -443,15 +443,16 @@ class InfiniteTalkPipeline:
                 If True, offloads models to CPU during generation to save VRAM
         """
 
-        # init teacache
+        # init teacache (handle possible DeepSpeed engine wrapping)
+        _core_model = getattr(self.model, 'module', self.model)
         if extra_args.use_teacache:
-            self.model.teacache_init(
+            _core_model.teacache_init(
                 sample_steps=sampling_steps,
                 teacache_thresh=extra_args.teacache_thresh,
                 model_scale=extra_args.size,
             )
         else:
-            self.model.disable_teacache()
+            _core_model.disable_teacache()
 
         input_prompt = input_data['prompt']
         cond_file_path = input_data['cond_video']
