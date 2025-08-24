@@ -15,16 +15,6 @@ from .attention import flash_attention, SingleStreamMutiAttention
 from ..utils.multitalk_utils import get_attn_map_with_target
 import logging
 try:
-    import torch._dynamo as _dynamo
-    def _graph_break():
-        try:
-            _dynamo.graph_break()
-        except Exception:
-            pass
-except Exception:
-    def _graph_break():
-        pass
-try:
     from sageattention import sageattn
     USE_SAGEATTN = True
     logging.info("Using sageattn")
@@ -628,15 +618,12 @@ class WanModel(ModelMixin, ConfigMixin):
         x[0] = x[0].to(context[0].dtype)
 
         # embeddings
-        _graph_break()
         x = [self.patch_embedding(u.unsqueeze(0)) for u in x]
         grid_sizes = torch.stack(
             [torch.tensor(u.shape[2:], dtype=torch.long) for u in x])
-        _graph_break()
         x = [u.flatten(2).transpose(1, 2) for u in x]
         seq_lens = torch.tensor([u.size(1) for u in x], dtype=torch.long)
         assert seq_lens.max() <= seq_len
-        _graph_break()
         x = torch.cat([
             torch.cat([u, u.new_zeros(1, seq_len - u.size(1), u.size(2))],
                       dim=1) for u in x
@@ -661,41 +648,31 @@ class WanModel(ModelMixin, ConfigMixin):
         # clip embedding
         if clip_fea is not None:
             context_clip = self.img_emb(clip_fea) 
-            _graph_break()
             context = torch.concat([context_clip, context], dim=1).to(x.dtype)
 
         
         audio_cond = audio.to(device=x.device, dtype=x.dtype)
         first_frame_audio_emb_s = audio_cond[:, :1, ...] 
         latter_frame_audio_emb = audio_cond[:, 1:, ...] 
-        _graph_break()
         latter_frame_audio_emb = rearrange(latter_frame_audio_emb, "b (n_t n) w s c -> b n_t n w s c", n=self.vae_scale) 
         middle_index = self.audio_window // 2
         latter_first_frame_audio_emb = latter_frame_audio_emb[:, :, :1, :middle_index+1, ...] 
-        _graph_break()
         latter_first_frame_audio_emb = rearrange(latter_first_frame_audio_emb, "b n_t n w s c -> b n_t (n w) s c") 
         latter_last_frame_audio_emb = latter_frame_audio_emb[:, :, -1:, middle_index:, ...] 
-        _graph_break()
         latter_last_frame_audio_emb = rearrange(latter_last_frame_audio_emb, "b n_t n w s c -> b n_t (n w) s c") 
         latter_middle_frame_audio_emb = latter_frame_audio_emb[:, :, 1:-1, middle_index:middle_index+1, ...] 
-        _graph_break()
         latter_middle_frame_audio_emb = rearrange(latter_middle_frame_audio_emb, "b n_t n w s c -> b n_t (n w) s c") 
-        _graph_break()
         latter_frame_audio_emb_s = torch.concat([latter_first_frame_audio_emb, latter_middle_frame_audio_emb, latter_last_frame_audio_emb], dim=2) 
-        _graph_break()
         audio_embedding = self.audio_proj(first_frame_audio_emb_s, latter_frame_audio_emb_s) 
         human_num = len(audio_embedding)
-        _graph_break()
         audio_embedding = torch.concat(audio_embedding.split(1), dim=2).to(x.dtype)
 
 
         # convert ref_target_masks to token_ref_target_masks
         if ref_target_masks is not None:
             ref_target_masks = ref_target_masks.unsqueeze(0).to(torch.float32) 
-            _graph_break()
             token_ref_target_masks = nn.functional.interpolate(ref_target_masks, size=(N_h, N_w), mode='nearest') 
             token_ref_target_masks = token_ref_target_masks.squeeze(0)
-            _graph_break()
             token_ref_target_masks = (token_ref_target_masks > 0)
             token_ref_target_masks = token_ref_target_masks.view(token_ref_target_masks.shape[0], -1) 
             token_ref_target_masks = token_ref_target_masks.to(x.dtype)

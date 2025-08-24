@@ -9,11 +9,6 @@ from xfuser.core.distributed import (
     get_sp_group,
 )
 import xformers.ops
-try:
-    import torch._dynamo as _dynamo
-    _dynamo_disable = getattr(_dynamo, 'disable', lambda f: f)
-except Exception:
-    _dynamo_disable = (lambda f: f)
 
 # Revert to original flash attention check
 try:
@@ -36,7 +31,6 @@ __all__ = [
 ]
 
 
-@_dynamo_disable
 def flash_attention(
     q,
     k,
