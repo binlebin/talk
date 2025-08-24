@@ -286,6 +286,44 @@ class InfiniteTalkPipeline:
         # Optional acceleration backends (only when not using FSDP/USP)
         try:
             can_accelerate = (not dit_fsdp) and (not use_usp) and (quant is None)
+            # Allow torch.compile and DeepSpeed to be used together by compiling first
+            if can_accelerate and torch_compile and hasattr(torch, "compile"):
+                # Make compile more resilient across dynamic shapes and backend hiccups
+                try:
+                    import torch._dynamo as _dynamo
+                    _dynamo.config.suppress_errors = True
+                except Exception:
+                    pass
+                try:
+                    # Reduce likelihood of cudagraph reuse issues
+                    import torch._inductor.config as _inductor_config
+                    _inductor_config.cudagraphs = False
+                    if hasattr(_inductor_config, 'triton') and hasattr(_inductor_config.triton, 'cudagraphs'):
+                        _inductor_config.triton.cudagraphs = False
+                except Exception:
+                    pass
+                _compile_kwargs = dict(mode=compile_mode, fullgraph=compile_fullgraph)
+                try:
+                    # dynamic=True improves support for input-dynamic shapes
+                    import inspect as _inspect
+                    if 'dynamic' in _inspect.signature(torch.compile).parameters:
+                        _compile_kwargs['dynamic'] = True
+                except Exception:
+                    pass
+                # Compile only inner blocks and head to avoid compiling dynamic top-level forward
+                try:
+                    for i, blk in enumerate(self.model.blocks):
+                        try:
+                            self.model.blocks[i] = torch.compile(blk, **_compile_kwargs)
+                        except Exception:
+                            continue
+                    if hasattr(self.model, 'head') and isinstance(self.model.head, nn.Module):
+                        try:
+                            self.model.head = torch.compile(self.model.head, **_compile_kwargs)
+                        except Exception:
+                            pass
+                except Exception:
+                    logging.warning("Partial block-level compilation skipped due to error; proceeding without compile.")
             if can_accelerate and deepspeed_inference:
                 import deepspeed as _ds  # optional dependency
                 _dtype = self.param_dtype
@@ -294,17 +332,12 @@ class InfiniteTalkPipeline:
                         _dtype = torch.bfloat16
                     elif ds_dtype.lower() in ["fp16", "float16", "half"]:
                         _dtype = torch.float16
+                # Kernel injection may conflict with torch.compile graphs
+                _inject = not (torch_compile and hasattr(torch, "compile"))
                 self.model = _ds.init_inference(
                     self.model,
                     dtype=_dtype,
-                    replace_with_kernel_inject=True,
-                )
-            elif can_accelerate and torch_compile and hasattr(torch, "compile"):
-                # compile the core diffusion model forward for faster inference
-                self.model = torch.compile(
-                    self.model,
-                    mode=compile_mode,
-                    fullgraph=compile_fullgraph,
+                    replace_with_kernel_inject=_inject,
                 )
         except Exception as e:
             logging.warning(f"Acceleration backend setup skipped due to error: {e}")
@@ -742,6 +775,12 @@ class InfiniteTalkPipeline:
 
                 progress_wrap = partial(tqdm, total=len(timesteps)-1) if progress else (lambda x: x)
                 for i in progress_wrap(range(len(timesteps)-1)):
+                    # Mark cudagraph step begin to avoid graph output being overwritten across runs
+                    if hasattr(torch, 'compiler') and hasattr(torch.compiler, 'cudagraph_mark_step_begin'):
+                        try:
+                            torch.compiler.cudagraph_mark_step_begin()
+                        except Exception:
+                            pass
                     timestep = timesteps[i]
                     latent[:, :cur_motion_frames_latent_num] = latent_motion_frames
                     latent_model_input = [latent.to(self.device)]
